@@ -236,7 +236,7 @@ impl Table {
         self.current_version.as_ref().expect("table must be loaded")
     }
 
-    pub(crate) fn current_table_version(&self) -> i64 {
+    pub fn current_table_version(&self) -> i64 {
         self.current_table_version
     }
 
