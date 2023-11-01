@@ -176,7 +176,7 @@ impl From<types::FieldSummary> for FieldSummary {
     }
 }
 
-pub(crate) struct ManifestListWriter {
+pub struct ManifestListWriter {
     op: Operator,
     // Output path relative to operator root.
     output_path: String,
@@ -186,7 +186,7 @@ pub(crate) struct ManifestListWriter {
 }
 
 impl ManifestListWriter {
-    pub(crate) fn new(
+    pub fn new(
         op: Operator,
         output_path: String,
         snapshot_id: i64,
@@ -203,7 +203,7 @@ impl ManifestListWriter {
     }
 
     /// Write manifest list to file. Return the absolute path of the file.
-    pub(crate) async fn write(self, manifest_list: ManifestList) -> Result<()> {
+    pub async fn write(self, manifest_list: ManifestList) -> Result<()> {
         let avro_schema = to_avro_schema(&types::ManifestList::v2_schema(), Some("manifest_file"))?;
         let mut avro_writer = self.v2_writer(&avro_schema)?;
 

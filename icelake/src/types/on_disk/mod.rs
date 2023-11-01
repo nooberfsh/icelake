@@ -7,7 +7,7 @@ pub use manifest_file::{data_file_from_json, data_file_to_json, parse_manifest_f
 
 mod manifest_list;
 pub use manifest_list::parse_manifest_list;
-pub(crate) use manifest_list::ManifestListWriter;
+pub use manifest_list::ManifestListWriter;
 
 mod partition_spec;
 pub use partition_spec::parse_partition_spec;

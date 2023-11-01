@@ -418,7 +418,7 @@ impl Field {
         }
     }
 
-    fn with_comment(mut self, doc: impl Into<String>) -> Self {
+    pub fn with_comment(mut self, doc: impl Into<String>) -> Self {
         self.comment = Some(doc.into());
         self
     }
