@@ -19,6 +19,7 @@ enum Operation {
     /// Append a new data file.
     AppendDataFile(DataFile),
     AppendDeleteFile(DataFile),
+    RewriteDataFile(DataFile),
 }
 
 struct CommitContext {
@@ -51,6 +52,12 @@ impl<'a> Transaction<'a> {
     pub fn append_data_file(&mut self, data_file: impl IntoIterator<Item = DataFile>) {
         self.ops
             .extend(data_file.into_iter().map(Operation::AppendDataFile));
+    }
+
+    /// Rewrite new data files.
+    pub fn rewrite_data_file(&mut self, data_file: impl IntoIterator<Item = DataFile>) {
+        self.ops
+            .extend(data_file.into_iter().map(Operation::RewriteDataFile));
     }
 
     /// Append new delete files.
@@ -170,6 +177,7 @@ impl<'a> Transaction<'a> {
 
         let mut data_manifest_entries: Vec<ManifestEntry> = Vec::with_capacity(ops.len());
         let mut delete_manifest_entries: Vec<ManifestEntry> = Vec::with_capacity(ops.len());
+        let mut rewrite = false;
 
         let mut new_summary_builder = SnapshotSummaryBuilder::new();
         for op in ops {
@@ -195,6 +203,18 @@ impl<'a> Transaction<'a> {
                         data_file,
                     };
                     delete_manifest_entries.push(manifest_entry);
+                }
+                Operation::RewriteDataFile(data_file) => {
+                    new_summary_builder.add(&data_file);
+                    let manifest_entry = ManifestEntry {
+                        status: ManifestStatus::Added,
+                        snapshot_id: Some(next_snapshot_id),
+                        sequence_number: Some(next_seq_number),
+                        file_sequence_number: Some(next_seq_number),
+                        data_file,
+                    };
+                    data_manifest_entries.push(manifest_entry);
+                    rewrite = true;
                 }
             }
         }
@@ -230,6 +250,9 @@ impl<'a> Transaction<'a> {
             let manifest_list = match cur_metadata.current_snapshot()? {
                 Some(s) => {
                     let mut ret = s.load_manifest_list(&ctx.io).await?;
+                    if rewrite {
+                        ret.entries.clear();
+                    }
                     ret.entries.push(data_manifest_list_entry);
                     if let Some(delete_manifest_list_entry) = delete_manifest_list_entry {
                         ret.entries.push(delete_manifest_list_entry);
