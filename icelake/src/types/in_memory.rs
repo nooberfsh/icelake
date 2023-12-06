@@ -166,7 +166,7 @@ impl Serialize for AnyValue {
 }
 
 /// Primitive Types within a schema.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Ord, PartialOrd)]
 pub enum Primitive {
     /// True or False
     Boolean,
