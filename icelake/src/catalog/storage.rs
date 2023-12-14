@@ -312,7 +312,7 @@ impl<O: OperatorCreator> Catalog for StorageCatalog<O> {
         let metadata = self.read_table_metadata(&path).await?;
         let table_op = self.table_operator(&table_path)?;
 
-        let metadata_location = format!("{}/{}", self.warehouse, path);
+        let metadata_location = path.clone();
         Ok(Table::builder_from_catalog(
             table_op,
             self.clone(),
