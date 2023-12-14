@@ -179,7 +179,7 @@ pub enum UpdateRequirement {
 }
 
 impl UpdateRequirement {
-    fn check(&self, table_metadata: &TableMetadata) -> bool {
+    pub fn check(&self, table_metadata: &TableMetadata) -> bool {
         match self {
             UpdateRequirement::AssertTableDoesNotExist => false,
             UpdateRequirement::AssertTableUUID(uuid) => {
@@ -279,7 +279,7 @@ pub enum MetadataUpdate {
 }
 
 impl MetadataUpdate {
-    fn apply(&self, metadata: &mut TableMetadata) -> Result<()> {
+    pub fn apply(&self, metadata: &mut TableMetadata) -> Result<()> {
         match self {
             MetadataUpdate::AddSnapshot { snapshot } => metadata.add_snapshot(snapshot.clone()),
             MetadataUpdate::SetSnapshotRef {
@@ -309,9 +309,9 @@ impl MetadataUpdate {
 
 /// Update table request.
 pub struct UpdateTable {
-    table_name: TableIdentifier,
-    requirements: Vec<UpdateRequirement>,
-    updates: Vec<MetadataUpdate>,
+    pub table_name: TableIdentifier,
+    pub requirements: Vec<UpdateRequirement>,
+    pub updates: Vec<MetadataUpdate>,
 }
 
 /// Update table builder.
