@@ -101,8 +101,7 @@ impl RollingWriter {
     }
 
     fn should_split(&self) -> bool {
-        self.current_row_num % self.config.rows_per_file == 0
-            && self.current_writer.as_ref().unwrap().get_written_size()
+            self.current_writer.as_ref().unwrap().get_written_size()
                 >= self.config.target_file_size_in_bytes
     }
 
