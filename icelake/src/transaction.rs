@@ -3,13 +3,14 @@
 use crate::catalog::{MetadataUpdate, UpdateTable};
 use crate::error::Result;
 use crate::types::{
-    DataFile, DataFileFormat, ManifestContentType, ManifestEntry, ManifestFile, ManifestList,
-    ManifestListEntry, ManifestListWriter, ManifestMetadata, ManifestStatus, ManifestWriter,
-    Snapshot, SnapshotReferenceType, SnapshotSummaryBuilder, TableMetadata, MAIN_BRANCH,
+    parse_manifest_file, DataFile, DataFileFormat, ManifestContentType, ManifestEntry,
+    ManifestFile, ManifestList, ManifestListEntry, ManifestListWriter, ManifestMetadata,
+    ManifestStatus, ManifestWriter, Snapshot, SnapshotReferenceType, SnapshotSummaryBuilder,
+    TableMetadata, MAIN_BRANCH,
 };
 use crate::Table;
 use opendal::Operator;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::mem::swap;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
@@ -20,6 +21,7 @@ enum Operation {
     AppendDataFile(DataFile),
     AppendDeleteFile(DataFile),
     RewriteDataFile(DataFile),
+    ReplaceDataFile(DataFile),
 }
 
 struct CommitContext {
@@ -58,6 +60,12 @@ impl<'a> Transaction<'a> {
     pub fn rewrite_data_file(&mut self, data_file: impl IntoIterator<Item = DataFile>) {
         self.ops
             .extend(data_file.into_iter().map(Operation::RewriteDataFile));
+    }
+
+    /// Replace new data files.
+    pub fn replace_data_file(&mut self, data_file: impl IntoIterator<Item = DataFile>) {
+        self.ops
+            .extend(data_file.into_iter().map(Operation::ReplaceDataFile));
     }
 
     /// Append new delete files.
@@ -177,7 +185,9 @@ impl<'a> Transaction<'a> {
 
         let mut data_manifest_entries: Vec<ManifestEntry> = Vec::with_capacity(ops.len());
         let mut delete_manifest_entries: Vec<ManifestEntry> = Vec::with_capacity(ops.len());
+        let mut partitions = HashSet::new();
         let mut rewrite = false;
+        let mut replace = false;
 
         let mut new_summary_builder = SnapshotSummaryBuilder::new();
         for op in ops {
@@ -216,6 +226,19 @@ impl<'a> Transaction<'a> {
                     data_manifest_entries.push(manifest_entry);
                     rewrite = true;
                 }
+                Operation::ReplaceDataFile(data_file) => {
+                    new_summary_builder.add(&data_file);
+                    partitions.insert(data_file.partition.clone());
+                    let manifest_entry = ManifestEntry {
+                        status: ManifestStatus::Added,
+                        snapshot_id: Some(next_snapshot_id),
+                        sequence_number: Some(next_seq_number),
+                        file_sequence_number: Some(next_seq_number),
+                        data_file,
+                    };
+                    data_manifest_entries.push(manifest_entry);
+                    replace = true;
+                }
             }
         }
 
@@ -252,6 +275,50 @@ impl<'a> Transaction<'a> {
                     let mut ret = s.load_manifest_list(&ctx.io).await?;
                     if rewrite {
                         ret.entries.clear();
+                    }
+                    if replace {
+                        for p in std::mem::take(&mut ret.entries) {
+                            let manifest = load_manifest(&ctx.io, &p.manifest_path).await?;
+                            let mut changed = false;
+                            let mut data_files = Vec::with_capacity(manifest.entries.len());
+                            for e in manifest.entries {
+                                if partitions.contains(&e.data_file.partition) {
+                                    changed = true;
+                                } else {
+                                    data_files.push(e.data_file)
+                                }
+                            }
+                            if changed {
+                                let mut data_manifest_entries: Vec<ManifestEntry> =
+                                    Vec::with_capacity(data_files.len());
+                                let mut new_summary_builder = SnapshotSummaryBuilder::new();
+                                for data_file in data_files {
+                                    new_summary_builder.add(&data_file);
+                                    let manifest_entry = ManifestEntry {
+                                        status: ManifestStatus::Added,
+                                        snapshot_id: Some(next_snapshot_id),
+                                        sequence_number: Some(next_seq_number),
+                                        file_sequence_number: Some(next_seq_number),
+                                        data_file,
+                                    };
+                                    data_manifest_entries.push(manifest_entry);
+                                }
+                                let data_manifest_list_entry =
+                                    Self::produce_new_manifest_list_entry(
+                                        data_manifest_entries,
+                                        ManifestContentType::Data,
+                                        table,
+                                        cur_metadata,
+                                        &mut ctx,
+                                        next_snapshot_id,
+                                        next_seq_number,
+                                    )
+                                    .await?;
+                                ret.entries.push(data_manifest_list_entry);
+                            } else {
+                                ret.entries.push(p);
+                            }
+                        }
                     }
                     ret.entries.push(data_manifest_list_entry);
                     if let Some(delete_manifest_list_entry) = delete_manifest_list_entry {
@@ -310,4 +377,8 @@ impl<'a> Transaction<'a> {
 
         Ok(new_snapshot)
     }
+}
+
+async fn load_manifest(op: &Operator, path: &str) -> Result<ManifestFile> {
+    parse_manifest_file(&op.read(Table::relative_path(op, path)?.as_str()).await?)
 }

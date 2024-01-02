@@ -218,7 +218,9 @@ impl Table {
     }
 
     /// Returns table config
-    pub fn table_config(&self) -> TableConfigRef { self.table_config.clone() }
+    pub fn table_config(&self) -> TableConfigRef {
+        self.table_config.clone()
+    }
 
     /// Returns catalog that manages this table.
     pub(crate) fn catalog(&self) -> CatalogRef {
