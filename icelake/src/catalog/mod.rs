@@ -129,7 +129,11 @@ pub trait Catalog: Send + Sync {
     }
 
     /// Update table.
-    async fn update_table(self: Arc<Self>, _update_table: &UpdateTable) -> Result<Table> {
+    async fn update_table(
+        self: Arc<Self>,
+        _table: &Table,
+        _update_table: &UpdateTable,
+    ) -> Result<Table> {
         Err(Error::new(
             ErrorKind::IcebergFeatureUnsupported,
             format!("update_table is not supported by {}", self.name()),

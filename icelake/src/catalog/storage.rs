@@ -325,7 +325,11 @@ impl<O: OperatorCreator> Catalog for StorageCatalog<O> {
         .build()?)
     }
 
-    async fn update_table(self: Arc<Self>, table_update: &UpdateTable) -> Result<Table> {
+    async fn update_table(
+        self: Arc<Self>,
+        _table: &Table,
+        table_update: &UpdateTable,
+    ) -> Result<Table> {
         let table = self.clone().load_table(&table_update.table_name).await?;
 
         let mut metadata = table.current_table_metadata().clone();

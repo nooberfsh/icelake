@@ -111,7 +111,11 @@ impl Catalog for RestCatalog {
     }
 
     /// Update table.
-    async fn update_table(self: Arc<Self>, update_table: &UpdateTable) -> Result<Table> {
+    async fn update_table(
+        self: Arc<Self>,
+        _tbl: &Table,
+        update_table: &UpdateTable,
+    ) -> Result<Table> {
         let request = self
             .rest_client
             .post(self.endpoints.table(&update_table.table_name)?)

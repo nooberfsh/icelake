@@ -113,7 +113,7 @@ impl<'a> Transaction<'a> {
         // Save new metadata
         swap(
             table,
-            &mut table.catalog().update_table(&table_update).await?,
+            &mut table.catalog().update_table(&table, &table_update).await?,
         );
         Ok(())
     }
