@@ -75,13 +75,7 @@ impl<B: FileWriterBuilder> BaseFileWriter<B> {
     }
 
     fn should_split(&self) -> bool {
-        if let Some(rolling_config) = &self.rolling_config {
-            self.current_row_num() % rolling_config.rows_per_file == 0
-                && self.current_writer.as_ref().unwrap().current_written_size() as u64
-                    >= rolling_config.target_file_size_in_bytes
-        } else {
-            false
-        }
+        false
     }
 
     async fn close_current_writer(&mut self) -> Result<()> {
