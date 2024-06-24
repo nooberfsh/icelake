@@ -380,5 +380,5 @@ impl<'a> Transaction<'a> {
 }
 
 async fn load_manifest(op: &Operator, path: &str) -> Result<ManifestFile> {
-    parse_manifest_file(&op.read(Table::relative_path(op, path)?.as_str()).await?)
+    parse_manifest_file(&op.read(Table::relative_path(op, path)?.as_str()).await?.to_vec())
 }
