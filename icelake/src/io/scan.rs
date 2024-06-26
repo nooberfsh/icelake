@@ -209,7 +209,7 @@ impl AsyncFileReader for ParquetFileReader {
                 .read_with(&self.path)
                 .range(range.start as u64..range.end as u64)
                 .await
-                .map(|data| data.to_bytes())
+                .map(|data| data.into())
                 .map_err(|e| ParquetError::General(format!("{}", e)))
         })
     }
@@ -239,8 +239,7 @@ impl AsyncFileReader for ParquetFileReader {
                     .read_with(&self.path)
                     .range((file_size - (FOOTER_SIZE as u64))..file_size)
                     .await
-                    .map_err(|e| ParquetError::General(format!("{}", e)))?
-                    .to_bytes();
+                    .map_err(|e| ParquetError::General(format!("{}", e)))?;
 
                 assert_eq!(footer_buffer.len(), FOOTER_SIZE);
                 footer.copy_from_slice(&footer_buffer);
@@ -264,8 +263,7 @@ impl AsyncFileReader for ParquetFileReader {
                 .read_with(&self.path)
                 .range(start..(start + metadata_len as u64))
                 .await
-                .map_err(|e| ParquetError::General(format!("{}", e)))?
-                .to_bytes();
+                .map_err(|e| ParquetError::General(format!("{}", e)))?;
             Ok(Arc::new(decode_metadata(&metadata_bytes)?))
         })
     }

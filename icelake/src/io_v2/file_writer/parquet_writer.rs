@@ -23,7 +23,7 @@ pub struct ParquetWriterBuilder<L: LocationGenerator> {
     operator: Operator,
     /// `buffer_size` determines the initial size of the intermediate buffer.
     /// The intermediate buffer will automatically be resized if necessary
-    _init_buffer_size: usize,
+    init_buffer_size: usize,
     props: WriterProperties,
     table_location: String,
     location_generator: L,
@@ -50,7 +50,7 @@ impl<L: LocationGenerator> ParquetWriterBuilder<L> {
         }
         Self {
             operator,
-            _init_buffer_size: init_buffer_size,
+            init_buffer_size,
             props: props.build(),
             table_location,
             location_generator,
@@ -67,14 +67,15 @@ impl<L: LocationGenerator> FileWriterBuilder for ParquetWriterBuilder<L> {
 
         let written_size = Arc::new(AtomicI64::new(0));
         let writer = TrackWriter::new(
-            self.operator
-                .writer(&file_name)
-                .await?
-                .into_futures_async_write(),
+            self.operator.writer(&file_name).await?,
             written_size.clone(),
         );
 
-        let writer = AsyncArrowWriter::try_new(writer, schema.clone(), Some(self.props))?;
+        let writer = AsyncArrowWriter::try_new(
+            writer,
+            schema.clone(),
+            Some(self.props),
+        )?;
 
         Ok(ParquetWriter {
             file_path: format!("{}/{}", self.table_location, file_name),
@@ -229,6 +230,7 @@ mod tests {
     use arrow_array::ArrayRef;
     use arrow_array::Int64Array;
     use arrow_array::RecordBatch;
+    use bytes::Bytes;
     use opendal::services::Memory;
     use opendal::Operator;
     use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
@@ -266,7 +268,7 @@ mod tests {
         pw.close().await?;
 
         let res = op.read("test").await?;
-        let res = res.to_bytes();
+        let res = Bytes::from(res);
         let mut reader = ParquetRecordBatchReaderBuilder::try_new(res)
             .unwrap()
             .build()
