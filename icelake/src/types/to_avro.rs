@@ -4,19 +4,13 @@ use crate::error::Result;
 use crate::types::in_memory::{Any, Field, Primitive, Schema};
 use crate::{Error, ErrorKind};
 use apache_avro::schema::{
-    ArraySchema as AvroArraySchema, DecimalSchema, FixedSchema, MapSchema as AvroMapSchema, Name,
-    RecordField as AvroRecordField, RecordFieldOrder, RecordSchema as AvroRecordSchema,
-    UnionSchema,
+    DecimalSchema, FixedSchema, Name, RecordField as AvroRecordField, RecordFieldOrder,
+    RecordSchema as AvroRecordSchema, UnionSchema,
 };
 use apache_avro::Schema as AvroSchema;
 use serde_json::{Number, Value as JsonValue};
 use std::collections::BTreeMap;
 use std::iter::Iterator;
-
-const ELEMENT_ID: &str = "element-id";
-const LOGICAL_TYPE: &str = "logicalType";
-const KEY_ID: &str = "key-id";
-const VALUE_ID: &str = "value-id";
 
 pub fn to_avro_schema(value: &Schema, name: Option<&str>) -> Result<AvroSchema> {
     let avro_fields: Vec<AvroRecordField> = value
@@ -129,7 +123,6 @@ impl<'a, 'b> TryFrom<AnyWithFieldId<'a, 'b>> for AvroSchema {
                         doc: None,
                         size: Primitive::decimal_required_bytes(*precision as u32)? as usize,
                         attributes: BTreeMap::default(),
-                        default: None,
                     })),
                 }),
                 Primitive::Date => AvroSchema::Date,
@@ -160,19 +153,7 @@ impl<'a, 'b> TryFrom<AnyWithFieldId<'a, 'b>> for AvroSchema {
                         value_avro_schema = to_avro_option(value_avro_schema)?;
                     }
 
-                    AvroSchema::Map(AvroMapSchema {
-                        types: Box::new(value_avro_schema),
-                        attributes: BTreeMap::from([
-                            (
-                                KEY_ID.to_string(),
-                                JsonValue::String(map.key_id.to_string()),
-                            ),
-                            (
-                                VALUE_ID.to_string(),
-                                JsonValue::String(map.value_id.to_string()),
-                            ),
-                        ]),
-                    })
+                    AvroSchema::Map(Box::new(value_avro_schema))
                 } else {
                     let key_field = new_avro_record_field(
                         "key".to_string(),
@@ -203,16 +184,10 @@ impl<'a, 'b> TryFrom<AnyWithFieldId<'a, 'b>> for AvroSchema {
                         )
                     };
 
-                    AvroSchema::Array(AvroArraySchema {
-                        items: Box::new(AvroSchema::Record(avro_record_schema(
-                            format!("k{}_v{}", map.key_id, map.value_id).as_str(),
-                            vec![key_field, value_field],
-                        ))),
-                        attributes: BTreeMap::from([(
-                            LOGICAL_TYPE.to_string(),
-                            JsonValue::String("map".to_string()),
-                        )]),
-                    })
+                    AvroSchema::Array(Box::new(AvroSchema::Record(avro_record_schema(
+                        format!("k{}_v{}", map.key_id, map.value_id).as_str(),
+                        vec![key_field, value_field],
+                    ))))
                 }
             }
             Any::List(list) => {
@@ -223,10 +198,7 @@ impl<'a, 'b> TryFrom<AnyWithFieldId<'a, 'b>> for AvroSchema {
                 if !list.element_required {
                     avro_schema = to_avro_option(avro_schema)?;
                 }
-                AvroSchema::Array(AvroArraySchema {
-                    items: Box::new(avro_schema),
-                    attributes: BTreeMap::from([(ELEMENT_ID.to_string(), list.element_id.into())]),
-                })
+                AvroSchema::Array(Box::new(avro_schema))
             }
             Any::Struct(s) => {
                 let avro_fields: Vec<AvroRecordField> = s
