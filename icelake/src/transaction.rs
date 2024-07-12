@@ -180,7 +180,13 @@ impl<'a> Transaction<'a> {
             .current_snapshot_id
             .and_then(|v| if v == -1 { None } else { Some(v) })
             .unwrap_or(0);
-        let next_snapshot_id = cur_snapshot_id + 1;
+
+        let mut next_snapshot_id = cur_snapshot_id + 1;
+        if let Some(d) = &cur_metadata.snapshots {
+            if let Some(mid) = d.iter().map(|d| d.snapshot_id).max() {
+                next_snapshot_id = mid + 1;
+            }
+        }
         let next_seq_number = cur_metadata.last_sequence_number + 1;
 
         let mut data_manifest_entries: Vec<ManifestEntry> = Vec::with_capacity(ops.len());
@@ -380,5 +386,9 @@ impl<'a> Transaction<'a> {
 }
 
 async fn load_manifest(op: &Operator, path: &str) -> Result<ManifestFile> {
-    parse_manifest_file(&op.read(Table::relative_path(op, path)?.as_str()).await?.to_vec())
+    parse_manifest_file(
+        &op.read(Table::relative_path(op, path)?.as_str())
+            .await?
+            .to_vec(),
+    )
 }
