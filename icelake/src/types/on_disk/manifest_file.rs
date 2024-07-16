@@ -431,8 +431,9 @@ impl ManifestWriter {
             avro_writer.append(value)?;
         }
 
-        let length = avro_writer.flush()?;
         let connect = avro_writer.into_inner()?;
+        let length = connect.len();
+        assert!(length > 0, "empty manifest file, path: {}", self.output_path);
         self.op.write(self.output_path.as_str(), connect).await?;
 
         Ok(ManifestListEntry {
