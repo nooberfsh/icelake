@@ -89,7 +89,7 @@ mod tests {
         let to_write = RecordBatch::try_from_iter([("col", col)]).unwrap();
 
         let mut buf = vec![];
-        let mut w = AsyncArrowWriter::try_new(&mut buf, to_write.schema(), 0, None)?;
+        let mut w = AsyncArrowWriter::try_new(&mut buf, to_write.schema(), None)?;
         w.write(&to_write).await?;
         w.write(&to_write).await?;
         w.close().await?;
