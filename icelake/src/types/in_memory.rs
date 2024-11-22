@@ -1630,7 +1630,7 @@ impl DataFileBuilder {
     /// Build the `DataFile`.
     pub fn build(self) -> DataFile {
         log::info!("{:?}", self.meta_data);
-        let (column_sizes, value_counts, null_value_counts, distinct_counts) = {
+        let (_column_sizes, _value_counts, _null_value_counts, _distinct_counts) = {
             // how to decide column id
             let mut per_col_size: HashMap<i32, _> = HashMap::new();
             let mut per_col_val_num: HashMap<i32, _> = HashMap::new();
@@ -1687,10 +1687,10 @@ impl DataFileBuilder {
             // DataFileWriter only response to write data. Partition should place by more high level writer.
             partition: self.partition_value.unwrap_or_default(),
             record_count: self.meta_data.num_rows,
-            column_sizes: Some(column_sizes),
-            value_counts: Some(value_counts),
-            null_value_counts: Some(null_value_counts),
-            distinct_counts: Some(distinct_counts),
+            column_sizes: None,
+            value_counts: None,
+            null_value_counts: None,
+            distinct_counts: None,
             key_metadata: self.meta_data.footer_signing_key_metadata,
             file_size_in_bytes: self.written_size as i64,
             // # TODO

@@ -157,7 +157,7 @@ pub struct ParquetResult {
 impl FileWriteResult for ParquetResult {
     type R = DataFileBuilderV2;
     fn to_iceberg_result(self) -> DataFileBuilderV2 {
-        let (column_sizes, value_counts, null_value_counts, distinct_counts) = {
+        let (_column_sizes, _value_counts, _null_value_counts, _distinct_counts) = {
             let mut per_col_size: HashMap<i32, _> = HashMap::new();
             let mut per_col_val_num: HashMap<i32, _> = HashMap::new();
             let mut per_col_null_val_num: HashMap<i32, _> = HashMap::new();
@@ -203,10 +203,10 @@ impl FileWriteResult for ParquetResult {
         let mut builder = DataFileBuilderV2::default();
         builder
             .with_file_format(crate::types::DataFileFormat::Parquet)
-            .with_column_sizes(column_sizes)
-            .with_value_counts(value_counts)
-            .with_null_value_counts(null_value_counts)
-            .with_distinct_counts(distinct_counts)
+            // .with_column_sizes(column_sizes)
+            // .with_value_counts(value_counts)
+            // .with_null_value_counts(null_value_counts)
+            // .with_distinct_counts(distinct_counts)
             .with_file_size_in_bytes(self.written_size)
             .with_record_count(self.metadata.num_rows)
             .with_key_metadata(self.metadata.footer_signing_key_metadata)
